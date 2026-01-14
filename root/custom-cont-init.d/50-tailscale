@@ -1,0 +1,71 @@
+#!/usr/bin/with-contenv bash
+set -euo pipefail
+
+LOG="/var/log/tailscale-init.log"
+exec >>"$LOG" 2>&1
+
+echo "[tailscale-init] starting: $(date -Is)"
+
+# If no auth key provided, skip (container still runs chrome normally)
+if [[ -z "${TS_AUTHKEY:-}" ]]; then
+  echo "[tailscale-init] TS_AUTHKEY not set; skipping tailscale up"
+  exit 0
+fi
+
+# Start tailscaled if not already running.
+# --state=mem: ensures nothing persists on disk (true disposable container)
+if ! pgrep -x tailscaled >/dev/null 2>&1; then
+  echo "[tailscale-init] starting tailscaled (state=mem:)"
+  /usr/sbin/tailscaled \
+    --state=mem: \
+    --socket=/var/run/tailscale/tailscaled.sock \
+    >/var/log/tailscaled.log 2>&1 &
+fi
+
+# Wait for daemon socket
+for i in $(seq 1 80); do
+  if tailscale status >/dev/null 2>&1; then
+    break
+  fi
+  sleep 0.1
+done
+
+# If already logged in, don't re-run up
+if tailscale status 2>/dev/null | grep -q "Logged out"; then
+  echo "[tailscale-init] logged out; running tailscale up"
+else
+  echo "[tailscale-init] already authenticated; ensuring tailscale up options (best-effort)"
+fi
+
+HOSTNAME_ARG="--hostname=${TS_HOSTNAME:-chrome-ts}"
+EXTRA_ARGS="${TS_EXTRA_ARGS:-}"
+
+# Bring up Tailscale. If auth fails, don't kill the container.
+set +e
+tailscale up \
+  --authkey="${TS_AUTHKEY}" \
+  ${HOSTNAME_ARG} \
+  ${EXTRA_ARGS}
+RC=$?
+set -e
+
+if [[ $RC -ne 0 ]]; then
+  echo "[tailscale-init] tailscale up exited with code $RC (container continues)."
+else
+  echo "[tailscale-init] tailscale up OK"
+fi
+
+# Ensure we logout on stop for immediate node removal.
+# LinuxServer base images run s6; the recommended hook is /etc/cont-finish.d
+# Create it here at runtime to avoid extra files.
+mkdir -p /etc/cont-finish.d
+cat >/etc/cont-finish.d/50-tailscale-logout <<'EOF'
+#!/usr/bin/with-contenv bash
+set -euo pipefail
+echo "[tailscale-finish] stopping: $(date -Is)" >>/var/log/tailscale-init.log 2>&1
+tailscale logout >>/var/log/tailscale-init.log 2>&1 || true
+EOF
+chmod +x /etc/cont-finish.d/50-tailscale-logout
+
+echo "[tailscale-init] done"
+
