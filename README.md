@@ -2,7 +2,7 @@
 
 Private browsing via chromium docker with tailscale.
 
-This container runs [Chromium](https://www.chromium.org/Home) (via [LinuxServer.io's image](https://docs.linuxserver.io/images/docker-chromium)) with [Tailscale](https://tailscale.com/) integrated. This allows you to access the Chromium instance securely over your private Tailscale network.
+This container runs [Chromium](https://www.chromium.org/Home) (via [LinuxServer.io's image](https://docs.linuxserver.io/images/docker-chromium)) with [Tailscale](https://tailscale.com/) integrated. This allows you to privately browse using your own tailscale network.
 
 ## Prerequisites
 
