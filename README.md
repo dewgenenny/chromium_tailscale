@@ -18,6 +18,7 @@ This container runs [Chromium](https://www.chromium.org/Home) (via [LinuxServer.
 | `TS_EXTRA_ARGS` | Additional arguments to pass to `tailscale up`. | |
 | `CUSTOM_RES_W` | Width of the chromium window. | `1920` |
 | `CUSTOM_RES_H` | Height of the chromium window. | `1080` |
+| `CUSTOM_DPI` | DPI of the chromium window. | `96` |
 | `DEBIAN_FRONTEND`| System variable, likely shouldn't change. | `noninteractive` |
 
 ## Usage
@@ -28,11 +29,13 @@ This container runs [Chromium](https://www.chromium.org/Home) (via [LinuxServer.
 docker run -d \
   --name=chromium-tailscale \
   --security-opt seccomp=unconfined ` # Optional, but recommended for Chromium` \
+  --shm-size=1g ` # Recommended to prevent crashes` \
   -e PUID=1000 \
   -e PGID=1000 \
   -e TZ=Etc/UTC \
   -e TS_AUTHKEY="tskey-auth-..." \
   -e TS_HOSTNAME="my-secure-browser" \
+  -e TS_EXTRA_ARGS="--accept-dns=true" \
   -p 3000:3000 \
   -p 3001:3001 \
   --device /dev/net/tun:/dev/net/tun \
@@ -42,7 +45,8 @@ docker run -d \
 ```
 
 > [!IMPORTANT]
-> Because this container runs Tailscale, it requires `--device /dev/net/tun:/dev/net/tun` and capability additions `NET_ADMIN` and `NET_RAW` to function correctly.
+> - **Tailscale Requirements**: `--device /dev/net/tun:/dev/net/tun` and capability additions `NET_ADMIN` and `NET_RAW` are required.
+> - **Performance**: `--shm-size=1g` is highly recommended to prevent Chrome from crashing on memory-intensive pages.
 
 ### Accessing the application
 
