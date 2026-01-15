@@ -1,5 +1,7 @@
 # chromium_tailscale
 
+![Docker](https://github.com/dewgenenny/chromium_tailscale/actions/workflows/docker-publish.yml/badge.svg)
+
 Private browsing via chromium docker with tailscale.
 
 This container runs [Chromium](https://www.chromium.org/Home) (via [LinuxServer.io's image](https://docs.linuxserver.io/images/docker-chromium)) with [Tailscale](https://tailscale.com/) integrated. This allows you to privately browse using your own tailscale network.
