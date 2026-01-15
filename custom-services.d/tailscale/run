@@ -1,0 +1,25 @@
+#!/usr/bin/with-contenv bash
+set -euo pipefail
+
+echo "[tailscale] starting $(date -Is)"
+
+if [[ -z "${TS_AUTHKEY:-}" ]]; then
+  echo "[tailscale] TS_AUTHKEY not set; sleeping"
+  exec sleep infinity
+fi
+
+/usr/sbin/tailscaled --state=mem: --socket=/var/run/tailscale/tailscaled.sock >/var/log/tailscaled.log 2>&1 &
+for i in $(seq 1 80); do
+  tailscale status >/dev/null 2>&1 && break || true
+  sleep 0.1
+done
+
+HOSTNAME_ARG="--hostname=${TS_HOSTNAME:-chromium-ts}"
+EXTRA_ARGS="${TS_EXTRA_ARGS:-}"
+
+echo "[tailscale] tailscale up ${HOSTNAME_ARG} ${EXTRA_ARGS}"
+tailscale up --authkey="${TS_AUTHKEY}" ${HOSTNAME_ARG} ${EXTRA_ARGS} || true
+
+# Keep service alive
+exec sleep infinity
+

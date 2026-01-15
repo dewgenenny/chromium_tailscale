@@ -1,0 +1,12 @@
+#!/usr/bin/with-contenv bash
+set -euo pipefail
+
+# Ensure /tmp is correct
+chown root:root /tmp
+chmod 1777 /tmp
+
+# Ensure X11 socket dir is correct
+mkdir -p /tmp/.X11-unix
+chown root:root /tmp/.X11-unix
+chmod 1777 /tmp/.X11-unix
+

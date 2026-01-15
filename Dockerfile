@@ -1,21 +1,22 @@
-FROM lscr.io/linuxserver/chrome:latest
+FROM lscr.io/linuxserver/chromium:latest
 
 USER root
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Install dependencies + Tailscale (Debian/Ubuntu-based LSIO Chrome image)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      ca-certificates curl gnupg2 iproute2 iptables procps \
-    && install -m 0755 -d /etc/apt/keyrings \
+      ca-certificates curl gnupg iproute2 iptables procps \
+    && install -m 0755 -d /usr/share/keyrings \
     && curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg \
-       -o /etc/apt/keyrings/tailscale.gpg \
-    && curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.tailscale-keyring.list \
-       -o /etc/apt/sources.list.d/tailscale.list \
+       -o /usr/share/keyrings/tailscale-archive-keyring.gpg \
+    && printf "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/debian bookworm main\n" \
+       > /etc/apt/sources.list.d/tailscale.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends tailscale \
     && rm -rf /var/lib/apt/lists/*
 
-# LinuxServer init hook: runs at container start
-COPY root/custom-cont-init.d/50-tailscale /custom-cont-init.d/50-tailscale
-RUN chmod +x /custom-cont-init.d/50-tailscale
+COPY root/custom-cont-init.d/10-fix-x11-tmp /custom-cont-init.d/10-fix-x11-tmp
+COPY root/custom-cont-init.d/50-tailscale   /custom-cont-init.d/50-tailscale
+RUN chmod +x /custom-cont-init.d/10-fix-x11-tmp /custom-cont-init.d/50-tailscale
 
-USER abc
+# IMPORTANT: do NOT set USER here; LSIO handles runtime users.
+

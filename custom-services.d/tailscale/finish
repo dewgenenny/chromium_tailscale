@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bash
+set -euo pipefail
+echo "[tailscale] finish $(date -Is) logout"
+tailscale logout >/dev/null 2>&1 || true
+

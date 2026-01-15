@@ -4,66 +4,43 @@ set -euo pipefail
 LOG="/var/log/tailscale-init.log"
 exec >>"$LOG" 2>&1
 
-echo "[tailscale-init] starting: $(date -Is)"
+echo "[tailscale-init] $(date -Is) starting"
 
-# If no auth key provided, skip (container still runs chrome normally)
 if [[ -z "${TS_AUTHKEY:-}" ]]; then
-  echo "[tailscale-init] TS_AUTHKEY not set; skipping tailscale up"
+  echo "[tailscale-init] TS_AUTHKEY not set; skipping"
   exit 0
 fi
 
-# Start tailscaled if not already running.
-# --state=mem: ensures nothing persists on disk (true disposable container)
+mkdir -p /var/run/tailscale
+chmod 0755 /var/run/tailscale
+
+# Start tailscaled (memory-only state, disposable)
 if ! pgrep -x tailscaled >/dev/null 2>&1; then
-  echo "[tailscale-init] starting tailscaled (state=mem:)"
+  echo "[tailscale-init] starting tailscaled"
   /usr/sbin/tailscaled \
     --state=mem: \
     --socket=/var/run/tailscale/tailscaled.sock \
     >/var/log/tailscaled.log 2>&1 &
 fi
 
-# Wait for daemon socket
-for i in $(seq 1 80); do
-  if tailscale status >/dev/null 2>&1; then
-    break
-  fi
+# Wait for socket
+for i in $(seq 1 100); do
+  [[ -S /var/run/tailscale/tailscaled.sock ]] && break
   sleep 0.1
 done
 
-# If already logged in, don't re-run up
-if tailscale status 2>/dev/null | grep -q "Logged out"; then
-  echo "[tailscale-init] logged out; running tailscale up"
-else
-  echo "[tailscale-init] already authenticated; ensuring tailscale up options (best-effort)"
-fi
-
-HOSTNAME_ARG="--hostname=${TS_HOSTNAME:-chrome-ts}"
+HOSTNAME_ARG="--hostname=${TS_HOSTNAME:-chromium-ts}"
 EXTRA_ARGS="${TS_EXTRA_ARGS:-}"
 
-# Bring up Tailscale. If auth fails, don't kill the container.
-set +e
-tailscale up \
-  --authkey="${TS_AUTHKEY}" \
-  ${HOSTNAME_ARG} \
-  ${EXTRA_ARGS}
-RC=$?
-set -e
+echo "[tailscale-init] tailscale up ${HOSTNAME_ARG} ${EXTRA_ARGS}"
+tailscale up --authkey="${TS_AUTHKEY}" ${HOSTNAME_ARG} ${EXTRA_ARGS} || true
 
-if [[ $RC -ne 0 ]]; then
-  echo "[tailscale-init] tailscale up exited with code $RC (container continues)."
-else
-  echo "[tailscale-init] tailscale up OK"
-fi
-
-# Ensure we logout on stop for immediate node removal.
-# LinuxServer base images run s6; the recommended hook is /etc/cont-finish.d
-# Create it here at runtime to avoid extra files.
+# Logout on container stop: cont-finish hook is honored on LSIO images
 mkdir -p /etc/cont-finish.d
 cat >/etc/cont-finish.d/50-tailscale-logout <<'EOF'
 #!/usr/bin/with-contenv bash
 set -euo pipefail
-echo "[tailscale-finish] stopping: $(date -Is)" >>/var/log/tailscale-init.log 2>&1
-tailscale logout >>/var/log/tailscale-init.log 2>&1 || true
+tailscale logout >/dev/null 2>&1 || true
 EOF
 chmod +x /etc/cont-finish.d/50-tailscale-logout
 
