@@ -1,7 +1,9 @@
 FROM lscr.io/linuxserver/chromium:latest
 
 USER root
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive \
+    CUSTOM_RES_W=1920 \
+    CUSTOM_RES_H=1080
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates curl gnupg iproute2 iptables procps \

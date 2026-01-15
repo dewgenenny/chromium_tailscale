@@ -16,6 +16,8 @@ This container runs [Chromium](https://www.chromium.org/Home) (via [LinuxServer.
 | `TS_AUTHKEY` | **Required.** Your Tailscale auth key (starts with `tskey-`). | |
 | `TS_HOSTNAME` | The hostname to register in your Tailscale network. | `chromium-ts` |
 | `TS_EXTRA_ARGS` | Additional arguments to pass to `tailscale up`. | |
+| `CUSTOM_RES_W` | Width of the chromium window. | `1920` |
+| `CUSTOM_RES_H` | Height of the chromium window. | `1080` |
 | `DEBIAN_FRONTEND`| System variable, likely shouldn't change. | `noninteractive` |
 
 ## Usage
